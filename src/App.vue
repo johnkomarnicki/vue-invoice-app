@@ -19,7 +19,9 @@ export default {
     NewInvoice,
   },
   data() {
-    return {};
+    return {
+      testing: null,
+    };
   },
   created() {
     this.getInvoiceData();

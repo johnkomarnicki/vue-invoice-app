@@ -30,7 +30,7 @@
 
       <!-- Bill To -->
       <div class="bill-to flex flex-column">
-        <h4>Bill From</h4>
+        <h4>Bill To</h4>
         <div class="input flex flex-column">
           <label for="clientName">Client's Name</label>
           <input required type="text" id="clientName" v-model="clientName" />
@@ -244,6 +244,7 @@ export default {
       });
       this.loading = false;
       this.$store.commit("TOGGLE_INVOICE");
+      this.$store.dispatch("GET_INVOICES");
     },
   },
   watch: {

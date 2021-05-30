@@ -9,53 +9,71 @@
         <div
           class="status-button flex"
           :class="{
-            paid: currentInvoice[0].invoicePaid,
-            draft: currentInvoice[0].invoiceDraft,
-            pending: currentInvoice[0].invoicePending,
+            paid: currentInvoice.invoicePaid,
+            draft: currentInvoice.invoiceDraft,
+            pending: currentInvoice.invoicePending,
           }"
         >
-          <span v-if="currentInvoice[0].invoicePaid">Paid</span>
-          <span v-if="currentInvoice[0].invoiceDraft">Draft</span>
-          <span v-if="currentInvoice[0].invoicePending">Pending</span>
+          <span v-if="currentInvoice.invoicePaid">Paid</span>
+          <span v-if="currentInvoice.invoiceDraft">Draft</span>
+          <span v-if="currentInvoice.invoicePending">Pending</span>
         </div>
       </div>
       <div class="right flex">
         <button class="dark-purple">Edit</button>
-        <button class="red">Delete</button>
-        <button class="purple">Mark as Paid</button>
+        <button @click="deleteInvoice(currentInvoice.docId, currentInvoice.invoiceId)" class="red">Delete</button>
+        <button @click="updateStatusToPaid(currentInvoice.docId, currentInvoice.invoiceId)" class="purple">
+          Mark as Paid
+        </button>
       </div>
     </div>
     <div class="invoice-details flex flex-column">
       <div class="top flex">
         <div class="left flex flex-column">
-          <p><span>#</span>xm9141</p>
-          <p>Graphic Design</p>
+          <p><span>#</span>{{ currentInvoice.invoiceId }}</p>
+          <p>{{ currentInvoice.productDescription }}</p>
         </div>
         <div class="right flex flex-column">
-          <p>19 Union Terrace</p>
-          <p>London</p>
-          <p>E1 3EZ</p>
-          <p>United Kingdom</p>
+          <p>{{ currentInvoice.billerStreetAddress }}</p>
+          <p>{{ currentInvoice.billerCity }}</p>
+          <p>{{ currentInvoice.billerZipCode }}</p>
+          <p>{{ currentInvoice.billerCountry }}</p>
         </div>
       </div>
       <div class="middle flex">
         <div class="payment flex flex-column">
           <h4>Invoice Date</h4>
-          <p>Aug 21 2021</p>
+          <p>
+            {{
+              new Date(currentInvoice.invoiceDateUnix).toLocaleDateString("en-us", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
+            }}
+          </p>
           <h4>Payment Date</h4>
-          <p>Sep 21 2021</p>
+          <p>
+            {{
+              new Date(currentInvoice.paymentDueDateUnix).toLocaleDateString("en-us", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
+            }}
+          </p>
         </div>
         <div class="bill flex flex-column">
           <h4>Bill To</h4>
-          <p>Alex Grim</p>
-          <p>84 Church Way</p>
-          <p>Bradford</p>
-          <p>BDI 9PB</p>
-          <p>United Kingdom</p>
+          <p>{{ currentInvoice.clientName }}</p>
+          <p>{{ currentInvoice.clientStreetAddress }}</p>
+          <p>{{ currentInvoice.clientCity }}</p>
+          <p>{{ currentInvoice.clientZipCode }}</p>
+          <p>{{ currentInvoice.clientCountry }}</p>
         </div>
         <div class="send-to flex flex-column">
           <h4>Sent To</h4>
-          <p>alexgrim@mail.com</p>
+          <p>{{ currentInvoice.clientEmail }}</p>
         </div>
       </div>
       <div class="bottom flex flex-column">
@@ -66,16 +84,16 @@
             <p>Price</p>
             <p>Total</p>
           </div>
-          <div class="item flex">
-            <p>Banner Design</p>
-            <p>1</p>
-            <p>200.00</p>
-            <p>200.00</p>
+          <div v-for="(item, index) in currentInvoice.invoiceItemList" :key="index" class="item flex">
+            <p>{{ item.itemName }}</p>
+            <p>{{ item.qty }}</p>
+            <p>{{ item.price }}</p>
+            <p>{{ item.total }}</p>
           </div>
         </div>
         <div class="total flex">
           <p>Amount Due</p>
-          <p>556.00</p>
+          <p>{{ currentInvoice.invoiceTotal }}</p>
         </div>
       </div>
     </div>
@@ -83,20 +101,38 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
+import { mapActions, mapState } from "vuex";
 export default {
   name: "Invoice",
   async created() {
-    console.log("hello");
-    this.currentInvoice = await this.invoiceData.filter((invoice) => {
+    this.currentInvoiceArray = await this.invoiceData.filter((invoice) => {
       return invoice.invoiceId === this.$route.params.invoiceId;
     });
+    this.currentInvoice = this.currentInvoiceArray[0];
   },
   data() {
     return {
       currentInvoiceArray: null,
       currentInvoice: null,
     };
+  },
+  methods: {
+    ...mapActions(["DELETE_INVOICE", "UPDATE_STATUS_TO_PAID"]),
+    async deleteInvoice(docId, invoiceId) {
+      const data = {
+        docId,
+        invoiceId,
+      };
+      await this.DELETE_INVOICE(data);
+      this.$router.push({ name: "Home" });
+    },
+    async updateStatusToPaid(docId, invoiceId) {
+      const data = {
+        docId,
+        invoiceId,
+      };
+      await this.UPDATE_STATUS_TO_PAID(data);
+    },
   },
   computed: {
     ...mapState({

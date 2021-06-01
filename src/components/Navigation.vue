@@ -1,10 +1,8 @@
 <template>
-  <header>
+  <header class="flex">
     <div class="branding">
-      <img src="@/assets/Logo.png" alt="" />
+      <img src="@/assets/file-invoice-dollar-solid.png" alt="" />
     </div>
-    <hr />
-    <img class="profile" src="@/assets/profile.jpeg" alt="" />
   </header>
 </template>
 
@@ -14,14 +12,17 @@ export default {};
 
 <style lang="scss" scoped>
 header {
-  border-radius: 0 20px 20px 0;
-  min-width: 90px;
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
+  z-index: 99;
+  // align-items: center;
+  flex-direction: row;
   color: #fff;
   background-color: #1e2139;
+  @media (min-width: 900px) {
+    min-height: 100%;
+    flex-direction: column;
+    min-width: 90px;
+    border-radius: 0 20px 20px 0;
+  }
 }
 
 .branding {
@@ -29,27 +30,13 @@ header {
   padding: 24px;
   display: flex;
   justify-content: center;
-  width: 100%;
   background-color: #7c5dfa;
   img {
-    width: 30px;
+    width: auto;
     height: 30px;
   }
-}
-
-hr {
-  margin-top: auto;
-  width: 100%;
-  height: 1px;
-  border-color: #979797;
-}
-
-.profile {
-  margin: 20px 0;
-
-  object-fit: cover;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  @media (min-width: 900px) {
+    width: 100%;
+  }
 }
 </style>

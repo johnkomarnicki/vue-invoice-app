@@ -7,9 +7,17 @@
         <span>There are {{ invoiceData.length }} total invoices</span>
       </div>
       <div class="right flex">
-        <div class="filter flex">
-          <span>Filter By status</span>
+        <div ref="filter" @click="toggleFilterMenu" class="filter flex">
+          <span
+            >Filter By status<span v-if="filteredInvoice">: {{ filteredInvoice }}</span></span
+          >
           <img src="@/assets/icon-arrow-down.svg" alt="" />
+          <ul v-show="filterMenu" class="filter-menu">
+            <li @click="filterInvoices">Draft</li>
+            <li @click="filterInvoices">Pending</li>
+            <li @click="filterInvoices">Paid</li>
+            <li @click="filterInvoices">Clear Filter</li>
+          </ul>
         </div>
         <div @click="newInvoice" class="button flex">
           <div class="inner-button flex">
@@ -21,7 +29,7 @@
     </div>
     <!-- Invoices -->
     <div v-if="invoiceData.length > 0">
-      <Invoice v-for="(invoice, index) in invoiceData" :key="index" :invoice="invoice" />
+      <Invoice v-for="(invoice, index) in filteredData" :key="index" :invoice="invoice" />
     </div>
     <div class="empty flex flex-column" v-else>
       <img src="@/assets/illustration-empty.svg" alt="" />
@@ -39,18 +47,51 @@ export default {
   components: {
     Invoice,
   },
-  created() {
-    console.log(this.invoiceData.length);
+  data() {
+    return {
+      filterMenu: null,
+    };
   },
+  created() {},
   methods: {
-    ...mapMutations({
-      newInvoice: "TOGGLE_INVOICE",
-    }),
+    ...mapMutations(["FILTER_INVOICES", "TOGGLE_INVOICE"]),
+
+    newInvoice() {
+      this.TOGGLE_INVOICE();
+    },
+
+    toggleFilterMenu(e) {
+      if (e.target === this.$refs.filter) {
+        this.filterMenu = !this.filterMenu;
+      }
+    },
+
+    filterInvoices(e) {
+      this.filterMenu = !this.filterMenu;
+      if (e.target.innerText === "Clear Filter") {
+        this.FILTER_INVOICES(null);
+        return;
+      }
+      this.FILTER_INVOICES(e.target.innerText);
+    },
   },
   computed: {
-    ...mapState({
-      invoiceData: "invoiceData",
-    }),
+    ...mapState(["invoiceData", "filteredInvoice"]),
+
+    filteredData() {
+      return this.invoiceData.filter((invoice) => {
+        if (this.filteredInvoice === "Draft") {
+          return invoice.invoiceDraft === true;
+        }
+        if (this.filteredInvoice === "Pending") {
+          return invoice.invoicePending === true;
+        }
+        if (this.filteredInvoice === "Paid") {
+          return invoice.invoicePaid === true;
+        }
+        return invoice;
+      });
+    },
   },
 };
 </script>
@@ -79,11 +120,38 @@ export default {
       }
 
       .filter {
+        position: relative;
         margin-right: 40px;
+
+        span {
+          pointer-events: none;
+        }
+
         img {
+          pointer-events: none;
           margin-left: 12px;
           width: 9px;
           height: 5px;
+        }
+
+        .filter-menu {
+          width: 120px;
+          top: 25px;
+          list-style: none;
+          position: absolute;
+          background-color: #1e2139;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+          li {
+            cursor: pointer;
+            font-size: 12px;
+            padding: 10px 20px;
+
+            &:hover {
+              color: #1e2139;
+              background-color: #fff;
+            }
+          }
         }
       }
 

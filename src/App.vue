@@ -1,9 +1,18 @@
 <template>
-  <div class="app" v-if="invoicesLoaded">
-    <Navigation />
-    <div class="app-content flex flex-column">
-      <NewInvoice v-if="newInvoice" />
-      <router-view />
+  <div v-if="invoicesLoaded">
+    <div class="app flex" v-if="!mobile">
+      <Navigation />
+      <div class="app-content flex flex-column">
+        <Modal v-if="modalActive" />
+        <transition name="invoice">
+          <NewInvoice v-if="newInvoice" />
+        </transition>
+        <router-view />
+      </div>
+    </div>
+    <div class="mobile-message flex" v-else>
+      <h2>Sorry, this app is not supported on Mobile Devices</h2>
+      <p>To use this app, please use a computer or Tablet</p>
     </div>
   </div>
 </template>
@@ -12,30 +21,43 @@
 import { mapActions, mapState } from "vuex";
 import Navigation from "./components/Navigation";
 import NewInvoice from "./components/NewInvoice";
+import Modal from "./components/Modal";
 export default {
   name: "App",
   components: {
     Navigation,
     NewInvoice,
+    Modal,
   },
   data() {
     return {
-      testing: null,
+      windownWidth: null,
+      mobile: null,
     };
   },
   created() {
     this.getInvoiceData();
+    window.addEventListener("resize", this.checkScreen);
   },
   methods: {
-    ...mapActions({
-      getInvoiceData: "GET_INVOICES",
-    }),
+    ...mapActions(["GET_INVOICES"]),
+
+    getInvoiceData() {
+      this.GET_INVOICES();
+    },
+
+    checkScreen() {
+      this.windownWidth = window.innerWidth;
+      if (this.windownWidth <= 750) {
+        this.mobile = true;
+        return;
+      }
+      this.mobile = false;
+      return;
+    },
   },
   computed: {
-    ...mapState({
-      newInvoice: "newInvoice",
-      invoicesLoaded: "invoicesLoaded",
-    }),
+    ...mapState(["newInvoice", "invoicesLoaded", "modalActive"]),
   },
 };
 </script>
@@ -50,14 +72,44 @@ export default {
   font-family: "Poppins", sans-serif;
 }
 
+// animated invoice
+.invoice-enter-active,
+.invoice-leave-active {
+  transition: 0.8s ease all;
+}
+
+.invoice-enter-from,
+.invoice-leave-to {
+  transform: translateX(-700px);
+}
+
 .app {
   background-color: #141625;
-  display: flex;
   min-height: 100vh;
+  flex-direction: column;
+  @media (min-width: 900px) {
+    flex-direction: row;
+  }
 
   .app-content {
+    padding: 0 20px;
     flex: 1;
     position: relative;
+  }
+}
+
+.mobile-message {
+  flex-direction: column;
+  text-align: center;
+  padding: 20px;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  background-color: #141625;
+  color: #fff;
+
+  p {
+    margin-top: 16px;
   }
 }
 
@@ -86,6 +138,14 @@ button,
   background-color: #7c5dfa;
 }
 
+.green {
+  background-color: #33d69f;
+}
+
+.orange {
+  background-color: #ff8f00;
+}
+
 // utility classes
 
 .flex {
@@ -98,9 +158,13 @@ button,
 
 .container {
   width: 100%;
-  padding-top: 72px;
+  padding: 40px 10px;
   max-width: 850px;
   margin: 0 auto;
+
+  @media (min-width: 800px) {
+    padding-top: 72px;
+  }
 }
 
 .nav-link {

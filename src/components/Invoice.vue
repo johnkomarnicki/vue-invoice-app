@@ -2,16 +2,7 @@
   <router-link :to="{ name: 'Invoice', params: { invoiceId: invoice.invoiceId } }" class="invoice flex">
     <div class="left flex">
       <span class="tracking-number">#{{ invoice.invoiceId }}</span>
-      <span class="due-date"
-        >Due
-        {{
-          new Date(invoice.paymentDueDateUnix).toLocaleDateString("en-us", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })
-        }}</span
-      >
+      <span class="due-date">Due {{ invoice.paymentDueDate }}</span>
       <span class="person">{{ invoice.clientName }}</span>
     </div>
     <div class="right flex">
@@ -55,14 +46,8 @@ export default {
   align-items: center;
 
   .left {
+    align-items: center;
     flex-basis: 60%;
-  }
-
-  .right {
-    flex-basis: 40%;
-  }
-
-  .left {
     gap: 16px;
     span {
       flex: 1;
@@ -74,6 +59,8 @@ export default {
   }
 
   .right {
+    gap: 16px;
+    flex-basis: 40%;
     align-items: center;
 
     .price {

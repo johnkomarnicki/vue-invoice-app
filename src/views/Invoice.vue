@@ -20,10 +20,17 @@
         </div>
       </div>
       <div class="right flex">
-        <button class="dark-purple">Edit</button>
-        <button @click="deleteInvoice(currentInvoice.docId, currentInvoice.invoiceId)" class="red">Delete</button>
-        <button @click="updateStatusToPaid(currentInvoice.docId, currentInvoice.invoiceId)" class="purple">
+        <button @click="toggleEditInvoice(currentInvoice.docId)" class="dark-purple">Edit</button>
+        <button @click="deleteInvoice(currentInvoice.docId)" class="red">Delete</button>
+        <button v-if="currentInvoice.invoicePending" @click="updateStatusToPaid(currentInvoice.docId)" class="green">
           Mark as Paid
+        </button>
+        <button
+          @click="updateStatusToPending(currentInvoice.docId)"
+          v-if="currentInvoice.invoiceDraft || currentInvoice.invoicePaid"
+          class="orange"
+        >
+          Mark as Pending
         </button>
       </div>
     </div>
@@ -44,23 +51,11 @@
         <div class="payment flex flex-column">
           <h4>Invoice Date</h4>
           <p>
-            {{
-              new Date(currentInvoice.invoiceDateUnix).toLocaleDateString("en-us", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            }}
+            {{ currentInvoice.invoiceDate }}
           </p>
           <h4>Payment Date</h4>
           <p>
-            {{
-              new Date(currentInvoice.paymentDueDateUnix).toLocaleDateString("en-us", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            }}
+            {{ currentInvoice.paymentDueDate }}
           </p>
         </div>
         <div class="bill flex flex-column">
@@ -101,43 +96,57 @@
 </template>
 
 <script>
-import { mapActions, mapState } from "vuex";
+import { mapActions, mapMutations, mapState } from "vuex";
 export default {
   name: "Invoice",
   async created() {
-    this.currentInvoiceArray = await this.invoiceData.filter((invoice) => {
-      return invoice.invoiceId === this.$route.params.invoiceId;
-    });
-    this.currentInvoice = this.currentInvoiceArray[0];
+    this.getCurrentInvoice();
   },
   data() {
     return {
-      currentInvoiceArray: null,
       currentInvoice: null,
     };
   },
   methods: {
-    ...mapActions(["DELETE_INVOICE", "UPDATE_STATUS_TO_PAID"]),
-    async deleteInvoice(docId, invoiceId) {
-      const data = {
-        docId,
-        invoiceId,
-      };
-      await this.DELETE_INVOICE(data);
+    ...mapActions(["DELETE_INVOICE", "UPDATE_STATUS_TO_PAID", "UPDATE_STATUS_TO_PENDING"]),
+    ...mapMutations(["EDITING_INVOICE", "TOGGLE_INVOICE", "SET_CURRENT_INVOICE"]),
+
+    // Obtaining current invoice page load
+    getCurrentInvoice() {
+      this.SET_CURRENT_INVOICE(this.$route.params.invoiceId);
+      this.currentInvoice = this.currentInvoiceArray[0];
+    },
+
+    async deleteInvoice(docId) {
+      await this.DELETE_INVOICE(docId);
       this.$router.push({ name: "Home" });
     },
-    async updateStatusToPaid(docId, invoiceId) {
-      const data = {
-        docId,
-        invoiceId,
-      };
-      await this.UPDATE_STATUS_TO_PAID(data);
+
+    async updateStatusToPaid(docId) {
+      await this.UPDATE_STATUS_TO_PAID(docId);
+    },
+
+    async updateStatusToPending(docId) {
+      await this.UPDATE_STATUS_TO_PENDING(docId);
+    },
+
+    // toggles the editing invoice layover to appear
+    toggleEditInvoice(docId) {
+      this.EDITING_INVOICE(docId);
+      this.TOGGLE_INVOICE();
     },
   },
   computed: {
-    ...mapState({
-      invoiceData: "invoiceData",
-    }),
+    ...mapState(["invoiceData", "editInvoice", "currentInvoiceArray"]),
+  },
+  watch: {
+    // When editing is done, we need to update the FE
+    // We set our new updated state to the local data
+    editInvoice() {
+      if (!this.editInvoice) {
+        this.currentInvoice = this.currentInvoiceArray[0];
+      }
+    },
   },
 };
 </script>
@@ -199,10 +208,14 @@ export default {
       .left {
         font-size: 12px;
         p:first-child {
-          font-size: 16px;
+          font-size: 24px;
           text-transform: uppercase;
           color: #fff;
           margin-bottom: 8px;
+        }
+
+        p:nth-child(2) {
+          font-size: 16px;
         }
         span {
           color: #888eb0;
@@ -210,7 +223,7 @@ export default {
       }
 
       .right {
-        font-size: 11px;
+        font-size: 12px;
         align-items: flex-end;
       }
     }
@@ -218,6 +231,7 @@ export default {
     .middle {
       margin-top: 50px;
       color: #dfe3fa;
+      gap: 16px;
 
       h4 {
         font-size: 12px;
@@ -226,7 +240,7 @@ export default {
       }
 
       p {
-        font-size: 15px;
+        font-size: 16px;
       }
 
       .payment,
@@ -238,17 +252,21 @@ export default {
         h4:nth-child(3) {
           margin-top: 32px;
         }
+
+        p {
+          font-weight: 600;
+        }
       }
 
       .bill {
         p:nth-child(2) {
-          font-size: 15px;
+          font-size: 16px;
         }
         p:nth-child(3) {
           margin-top: auto;
         }
         p {
-          font-size: 11px;
+          font-size: 12px;
         }
       }
 
@@ -285,6 +303,11 @@ export default {
           margin-bottom: 32px;
           font-size: 13px;
           color: #fff;
+
+          &:last-child {
+            margin-bottom: 0px;
+          }
+
           p:first-child {
             flex: 3;
             text-align: left;

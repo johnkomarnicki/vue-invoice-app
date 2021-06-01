@@ -1,9 +1,9 @@
 <template>
   <div @click="checkClick" ref="newInvoiceWrap" class="new-invoice-wrap flex flex-column">
-    <Modal v-if="modalActive" v-on:close-modal="closeModal" />
-    <form @submit.prevent="uploadInvoice" class="new-invoice">
+    <form @submit.prevent="submitForm" class="new-invoice">
       <Loading v-show="loading" />
-      <h1>New Invoice</h1>
+      <h1 v-if="!editInvoice">New Invoice</h1>
+      <h1 v-else>Edit Invoice</h1>
 
       <!-- Bill From -->
       <div class="bill-from flex flex-column">
@@ -107,11 +107,13 @@
       <!-- Save/Exit -->
       <div class="save flex">
         <div class="left">
-          <button @click="closeInvoice" class="red">Discard</button>
+          <button v-if="!editInvoice" @click="closeInvoice" class="red">Discard</button>
+          <button v-else @click="closeInvoice" class="red">Cancel</button>
         </div>
         <div class="right flex">
-          <button @click="saveDraft" class="dark-purple">Save Draft</button>
-          <button @click="publishInvoice" class="purple">Create Invoice</button>
+          <button v-if="!editInvoice" @click="saveDraft" class="dark-purple">Save Draft</button>
+          <button v-if="!editInvoice" @click="publishInvoice" class="purple">Create Invoice</button>
+          <button v-else class="purple">Update Invoice</button>
         </div>
       </div>
     </form>
@@ -120,16 +122,15 @@
 
 <script>
 import db from "../firebase/firebaseInit";
-import Modal from "../components/Modal";
 import Loading from "../components/Loading";
-import { mapMutations } from "vuex";
+import { mapMutations, mapState } from "vuex";
 import { uid } from "uid";
 export default {
   data() {
     return {
       dateOptions: { year: "numeric", month: "short", day: "numeric" },
-      modalActive: false,
       loading: null,
+      docId: null,
       billerStreetAddress: null,
       billerCity: null,
       billerZipCode: null,
@@ -155,28 +156,56 @@ export default {
   created() {
     // When the component is opened, getting the date
     // for the invoice Date
-    this.invoiceDateUnix = Date.now();
-    this.invoiceDate = new Date(this.invoiceDateUnix).toLocaleDateString("en-us", this.dateOptions);
+    if (!this.editInvoice) {
+      this.invoiceDateUnix = Date.now();
+      this.invoiceDate = new Date(this.invoiceDateUnix).toLocaleDateString("en-us", this.dateOptions);
+    }
+
+    if (this.editInvoice) {
+      console.log("hello");
+      const currentInvoiceArray = this.invoiceData.filter((invoice) => {
+        return invoice.docId === this.currentEditingInvoice;
+      });
+      const currentInvoice = currentInvoiceArray[0];
+      this.docId = currentInvoice.docId;
+      this.billerStreetAddress = currentInvoice.billerStreetAddress;
+      this.billerCity = currentInvoice.billerCity;
+      this.billerZipCode = currentInvoice.billerZipCode;
+      this.billerCountry = currentInvoice.billerCountry;
+      this.clientName = currentInvoice.clientName;
+      this.clientEmail = currentInvoice.clientEmail;
+      this.clientStreetAddress = currentInvoice.clientStreetAddress;
+      this.clientCity = currentInvoice.clientCity;
+      this.clientZipCode = currentInvoice.clientZipCode;
+      this.clientCountry = currentInvoice.clientCountry;
+      this.invoiceDateUnix = currentInvoice.invoiceDateUnix;
+      this.invoiceDate = currentInvoice.invoiceDate;
+      this.paymentTerms = currentInvoice.paymentTerms;
+      this.paymentDueDateUnix = currentInvoice.paymentDueDateUnix;
+      this.paymentDueDate = currentInvoice.paymentDueDate;
+      this.productDescription = currentInvoice.productDescription;
+      this.invoicePending = currentInvoice.invoicePending;
+      this.invoiceDraft = currentInvoice.invoiceDraft;
+      this.invoiceItemList = currentInvoice.invoiceItemList;
+      this.invoiceTotal = currentInvoice.invoiceTotal;
+    }
   },
   components: {
-    Modal,
     Loading,
   },
   methods: {
-    ...mapMutations({
-      closeInvoice: "TOGGLE_INVOICE",
-    }),
+    ...mapMutations(["TOGGLE_INVOICE", "TOGGLE_MODAL"]),
 
     // If clicked on the black portion of popup
     // close newInvoice Component
     checkClick(e) {
       if (e.target === this.$refs.newInvoiceWrap) {
-        this.modalActive = true;
+        this.TOGGLE_MODAL();
       }
     },
 
-    closeModal() {
-      this.modalActive = !this.modalActive;
+    closeInvoice() {
+      this.TOGGLE_INVOICE();
     },
 
     // create new invoice item
@@ -206,6 +235,14 @@ export default {
       this.invoicePending = true;
     },
 
+    // cal invoice total
+    calInvoiceTotal() {
+      this.invoiceTotal = 0;
+      this.invoiceItemList.forEach((item) => {
+        this.invoiceTotal += item.total;
+      });
+    },
+
     async uploadInvoice() {
       if (this.invoiceItemList.length <= 0) {
         alert("please ensure you filled out invoice items!");
@@ -215,11 +252,10 @@ export default {
       this.loading = true;
 
       // calculating total of invoice, prior to uploading
-      this.invoiceItemList.forEach((item) => {
-        this.invoiceTotal += item.total;
-      });
+      this.calInvoiceTotal();
 
       const dataBase = db.collection("invoices").doc();
+
       await dataBase.set({
         invoiceId: uid(6),
         billerStreetAddress: this.billerStreetAddress,
@@ -232,8 +268,10 @@ export default {
         clientCity: this.clientCity,
         clientZipCode: this.clientZipCode,
         clientCountry: this.clientCountry,
+        invoiceDate: this.invoiceDate,
         invoiceDateUnix: this.invoiceDateUnix,
         paymentTerms: this.paymentTerms,
+        paymentDueDate: this.paymentDueDate,
         paymentDueDateUnix: this.paymentDueDateUnix,
         productDescription: this.productDescription,
         invoiceItemList: this.invoiceItemList,
@@ -242,10 +280,73 @@ export default {
         invoiceDraft: this.invoiceDraft,
         invoicePaid: null,
       });
+
       this.loading = false;
+
       this.$store.commit("TOGGLE_INVOICE");
+
       this.$store.dispatch("GET_INVOICES");
     },
+
+    async updateInvoice() {
+      if (this.invoiceItemList.length <= 0) {
+        alert("please ensure you filled out invoice items!");
+        return;
+      }
+
+      this.loading = true;
+
+      // calculating total of invoice, prior to uploading
+      this.calInvoiceTotal();
+
+      console.log(this.invoiceTotal);
+
+      const dataBase = db.collection("invoices").doc(this.docId);
+
+      await dataBase.update({
+        billerStreetAddress: this.billerStreetAddress,
+        billerCity: this.billerCity,
+        billerZipCode: this.billerZipCode,
+        billerCountry: this.billerCountry,
+        clientName: this.clientName,
+        clientEmail: this.clientEmail,
+        clientStreetAddress: this.clientStreetAddress,
+        clientCity: this.clientCity,
+        clientZipCode: this.clientZipCode,
+        clientCountry: this.clientCountry,
+        paymentTerms: this.paymentTerms,
+        paymentDueDate: this.paymentDueDate,
+        paymentDueDateUnix: this.paymentDueDateUnix,
+        productDescription: this.productDescription,
+        invoiceItemList: this.invoiceItemList,
+        invoiceTotal: this.invoiceTotal,
+      });
+
+      this.loading = false;
+      const data = {
+        docId: this.docId,
+        routeId: this.$route.params.invoiceId,
+      };
+      this.$store.dispatch("UPDATE_INVOICE", data);
+    },
+
+    // Main function that gets called when submitting form
+    // we are then checking if it is a new invoice, or edits
+    // then running the correct function
+    submitForm() {
+      if (this.editInvoice) {
+        this.updateInvoice();
+        return;
+      }
+      this.uploadInvoice();
+    },
+  },
+  computed: {
+    ...mapState({
+      editInvoice: "editInvoice",
+      currentEditingInvoice: "currentEditingInvoice",
+      invoiceData: "invoiceData",
+    }),
   },
   watch: {
     // Watching for user to select a payment term
@@ -261,11 +362,16 @@ export default {
 
 <style lang="scss" scoped>
 .new-invoice-wrap {
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.3);
+  top: 0;
+  left: 0;
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0);
   width: 100%;
   height: 100vh;
   overflow: scroll;
+  @media (min-width: 900px) {
+    left: 90px;
+  }
 
   .new-invoice {
     position: relative;
@@ -274,7 +380,7 @@ export default {
     width: 100%;
     background-color: #141625;
     color: #dfe3fa;
-
+    box-shadow: 10px 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     h1 {
       margin-bottom: 48px;
       color: #fff;

@@ -1,8 +1,9 @@
 <template>
   <div v-if="currentInvoice" class="invoice-view container">
     <router-link class="nav-link flex" :to="{ name: 'Home' }">
-      <img src="@/assets/icon-arrow-left.svg" alt="" /> Go Back</router-link
-    >
+      <img src="@/assets/icon-arrow-left.svg" alt="" /> Go Back
+    </router-link>
+    <!-- Header -->
     <div class="header flex">
       <div class="left flex">
         <span>Status</span>
@@ -20,20 +21,22 @@
         </div>
       </div>
       <div class="right flex">
-        <button @click="toggleEditInvoice(currentInvoice.docId)" class="dark-purple">Edit</button>
+        <button @click="toggleEditInvoice" class="dark-purple">Edit</button>
         <button @click="deleteInvoice(currentInvoice.docId)" class="red">Delete</button>
-        <button v-if="currentInvoice.invoicePending" @click="updateStatusToPaid(currentInvoice.docId)" class="green">
+        <button @click="updateStatusToPaid(currentInvoice.docId)" v-if="currentInvoice.invoicePending" class="green">
           Mark as Paid
         </button>
         <button
-          @click="updateStatusToPending(currentInvoice.docId)"
           v-if="currentInvoice.invoiceDraft || currentInvoice.invoicePaid"
+          @click="updateStatusToPending(currentInvoice.docId)"
           class="orange"
         >
           Mark as Pending
         </button>
       </div>
     </div>
+
+    <!-- Invoice Details -->
     <div class="invoice-details flex flex-column">
       <div class="top flex">
         <div class="left flex flex-column">
@@ -73,9 +76,9 @@
       </div>
       <div class="bottom flex flex-column">
         <div class="billing-items">
-          <div class="headings flex">
+          <div class="heading flex">
             <p>Item Name</p>
-            <p>QTY.</p>
+            <p>QTY</p>
             <p>Price</p>
             <p>Total</p>
           </div>
@@ -98,23 +101,28 @@
 <script>
 import { mapActions, mapMutations, mapState } from "vuex";
 export default {
-  name: "Invoice",
-  async created() {
-    this.getCurrentInvoice();
-  },
+  name: "invoiceView",
   data() {
     return {
       currentInvoice: null,
     };
   },
+  created() {
+    this.getCurrentInvoice();
+  },
   methods: {
-    ...mapActions(["DELETE_INVOICE", "UPDATE_STATUS_TO_PAID", "UPDATE_STATUS_TO_PENDING"]),
-    ...mapMutations(["EDITING_INVOICE", "TOGGLE_INVOICE", "SET_CURRENT_INVOICE"]),
+    ...mapMutations(["SET_CURRENT_INVOICE", "TOGGLE_EDIT_INVOICE", "TOGGLE_INVOICE"]),
 
-    // Obtaining current invoice page load
+    ...mapActions(["DELETE_INVOICE", "UPDATE_STATUS_TO_PENDING", "UPDATE_STATUS_TO_PAID"]),
+
     getCurrentInvoice() {
       this.SET_CURRENT_INVOICE(this.$route.params.invoiceId);
       this.currentInvoice = this.currentInvoiceArray[0];
+    },
+
+    toggleEditInvoice() {
+      this.TOGGLE_EDIT_INVOICE();
+      this.TOGGLE_INVOICE();
     },
 
     async deleteInvoice(docId) {
@@ -122,26 +130,18 @@ export default {
       this.$router.push({ name: "Home" });
     },
 
-    async updateStatusToPaid(docId) {
-      await this.UPDATE_STATUS_TO_PAID(docId);
+    updateStatusToPaid(docId) {
+      this.UPDATE_STATUS_TO_PAID(docId);
     },
 
-    async updateStatusToPending(docId) {
-      await this.UPDATE_STATUS_TO_PENDING(docId);
-    },
-
-    // toggles the editing invoice layover to appear
-    toggleEditInvoice(docId) {
-      this.EDITING_INVOICE(docId);
-      this.TOGGLE_INVOICE();
+    updateStatusToPending(docId) {
+      this.UPDATE_STATUS_TO_PENDING(docId);
     },
   },
   computed: {
-    ...mapState(["invoiceData", "editInvoice", "currentInvoiceArray"]),
+    ...mapState(["currentInvoiceArray", "editInvoice"]),
   },
   watch: {
-    // When editing is done, we need to update the FE
-    // We set our new updated state to the local data
     editInvoice() {
       if (!this.editInvoice) {
         this.currentInvoice = this.currentInvoiceArray[0];
@@ -217,6 +217,7 @@ export default {
         p:nth-child(2) {
           font-size: 16px;
         }
+
         span {
           color: #888eb0;
         }
@@ -243,8 +244,8 @@ export default {
         font-size: 16px;
       }
 
-      .payment,
-      .bill {
+      .bill,
+      .payment {
         flex: 1;
       }
 
@@ -265,6 +266,7 @@ export default {
         p:nth-child(3) {
           margin-top: auto;
         }
+
         p {
           font-size: 12px;
         }
@@ -283,7 +285,7 @@ export default {
         border-radius: 20px 20px 0 0;
         background-color: #252945;
 
-        .headings {
+        .heading {
           color: #dfe3fa;
           font-size: 12px;
           margin-bottom: 32px;
@@ -305,7 +307,7 @@ export default {
           color: #fff;
 
           &:last-child {
-            margin-bottom: 0px;
+            margin-bottom: 0;
           }
 
           p:first-child {

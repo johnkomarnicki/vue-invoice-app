@@ -1,5 +1,5 @@
 <template>
-  <div class="modal">
+  <div class="modal flex">
     <div class="modal-content">
       <p>Are you sure you want to exit? Your changes will not be saved?</p>
       <div class="actions flex">
@@ -13,8 +13,9 @@
 <script>
 import { mapMutations, mapState } from "vuex";
 export default {
+  name: "modal",
   methods: {
-    ...mapMutations(["TOGGLE_INVOICE", "TOGGLE_EDITING_INVOICE", "TOGGLE_MODAL"]),
+    ...mapMutations(["TOGGLE_MODAL", "TOGGLE_INVOICE", "TOGGLE_EDIT_INVOICE"]),
 
     closeModal() {
       this.TOGGLE_MODAL();
@@ -23,10 +24,8 @@ export default {
     closeInvoice() {
       this.TOGGLE_MODAL();
       this.TOGGLE_INVOICE();
-      // only toggling editing invoice
-      // if currently being edited
       if (this.editInvoice) {
-        this.TOGGLE_EDITING_INVOICE();
+        this.TOGGLE_EDIT_INVOICE();
       }
     },
   },
@@ -40,7 +39,6 @@ export default {
 .modal {
   z-index: 100;
   position: fixed;
-  display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;

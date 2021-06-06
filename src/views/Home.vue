@@ -7,16 +7,16 @@
         <span>There are {{ invoiceData.length }} total invoices</span>
       </div>
       <div class="right flex">
-        <div ref="filter" @click="toggleFilterMenu" class="filter flex">
+        <div @click="toggleFilterMenu" class="filter flex">
           <span
-            >Filter By status<span v-if="filteredInvoice">: {{ filteredInvoice }}</span></span
+            >Filter by status <span v-if="filteredInvoice">: {{ filteredInvoice }}</span></span
           >
           <img src="@/assets/icon-arrow-down.svg" alt="" />
           <ul v-show="filterMenu" class="filter-menu">
-            <li @click="filterInvoices">Draft</li>
-            <li @click="filterInvoices">Pending</li>
-            <li @click="filterInvoices">Paid</li>
-            <li @click="filterInvoices">Clear Filter</li>
+            <li @click="filteredInvoices">Draft</li>
+            <li @click="filteredInvoices">Pending</li>
+            <li @click="filteredInvoices">Paid</li>
+            <li @click="filteredInvoices">Clear Filter</li>
           </ul>
         </div>
         <div @click="newInvoice" class="button flex">
@@ -29,9 +29,9 @@
     </div>
     <!-- Invoices -->
     <div v-if="invoiceData.length > 0">
-      <Invoice v-for="(invoice, index) in filteredData" :key="index" :invoice="invoice" />
+      <Invoice v-for="(invoice, index) in filteredData" :invoice="invoice" :key="index" />
     </div>
-    <div class="empty flex flex-column" v-else>
+    <div v-else class="empty flex flex-column">
       <img src="@/assets/illustration-empty.svg" alt="" />
       <h3>There is nothing here</h3>
       <p>Create a new invoice by clicking the New Invoice button and get started</p>
@@ -40,43 +40,39 @@
 </template>
 
 <script>
-import { mapMutations, mapState } from "vuex";
 import Invoice from "../components/Invoice";
+import { mapMutations, mapState } from "vuex";
 export default {
   name: "Home",
-  components: {
-    Invoice,
-  },
   data() {
     return {
       filterMenu: null,
+      filteredInvoice: null,
     };
   },
-  created() {},
+  components: {
+    Invoice,
+  },
   methods: {
-    ...mapMutations(["FILTER_INVOICES", "TOGGLE_INVOICE"]),
-
+    ...mapMutations(["TOGGLE_INVOICE"]),
     newInvoice() {
       this.TOGGLE_INVOICE();
     },
 
-    toggleFilterMenu(e) {
-      if (e.target === this.$refs.filter) {
-        this.filterMenu = !this.filterMenu;
-      }
+    toggleFilterMenu() {
+      this.filterMenu = !this.filterMenu;
     },
 
-    filterInvoices(e) {
-      this.filterMenu = !this.filterMenu;
+    filteredInvoices(e) {
       if (e.target.innerText === "Clear Filter") {
-        this.FILTER_INVOICES(null);
+        this.filteredInvoice = null;
         return;
       }
-      this.FILTER_INVOICES(e.target.innerText);
+      this.filteredInvoice = e.target.innerText;
     },
   },
   computed: {
-    ...mapState(["invoiceData", "filteredInvoice"]),
+    ...mapState(["invoiceData"]),
 
     filteredData() {
       return this.invoiceData.filter((invoice) => {
@@ -102,10 +98,12 @@ export default {
 
   .header {
     margin-bottom: 65px;
+
     .left,
     .right {
       flex: 1;
     }
+
     .right {
       justify-content: flex-end;
       align-items: center;
@@ -122,13 +120,9 @@ export default {
       .filter {
         position: relative;
         margin-right: 40px;
-
-        span {
-          pointer-events: none;
-        }
+        cursor: pointer;
 
         img {
-          pointer-events: none;
           margin-left: 12px;
           width: 9px;
           height: 5px;
@@ -136,9 +130,9 @@ export default {
 
         .filter-menu {
           width: 120px;
+          position: absolute;
           top: 25px;
           list-style: none;
-          position: absolute;
           background-color: #1e2139;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 
@@ -156,7 +150,6 @@ export default {
       }
 
       .button {
-        cursor: pointer;
         padding: 8px 10px;
         background-color: #7c5dfa;
         border-radius: 40px;

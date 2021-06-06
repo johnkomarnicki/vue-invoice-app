@@ -1,6 +1,6 @@
 <template>
-  <div @click="checkClick" ref="newInvoiceWrap" class="new-invoice-wrap flex flex-column">
-    <form @submit.prevent="submitForm" class="new-invoice">
+  <div @click="checkClick" ref="invoiceWrap" class="invoice-wrap flex flex-column">
+    <form @submit.prevent="submitForm" class="invoice-content">
       <Loading v-show="loading" />
       <h1 v-if="!editInvoice">New Invoice</h1>
       <h1 v-else>Edit Invoice</h1>
@@ -68,12 +68,12 @@
           </div>
           <div class="input flex flex-column">
             <label for="paymentDueDate">Payment Due</label>
-            <input disabled type="text" v-model="paymentDueDate" />
+            <input disabled type="text" id="paymentDueDate" v-model="paymentDueDate" />
           </div>
         </div>
         <div class="input flex flex-column">
           <label for="paymentTerms">Payment Terms</label>
-          <select required name="paymentTerms" id="paymentTerms" v-model="paymentTerms">
+          <select required type="text" id="paymentTerms" v-model="paymentTerms">
             <option value="30">Net 30 Days</option>
             <option value="60">Net 60 Days</option>
           </select>
@@ -89,7 +89,7 @@
               <th class="item-name">Item Name</th>
               <th class="qty">Qty</th>
               <th class="price">Price</th>
-              <th class="total">Total</th>
+              <th class="total">Toal</th>
             </tr>
             <tr class="table-items flex" v-for="(item, index) in invoiceItemList" :key="index">
               <td class="item-name"><input type="text" v-model="item.itemName" /></td>
@@ -100,20 +100,22 @@
             </tr>
           </table>
 
-          <div @click="addNewInvoiceItem" class="flex button"><img src="@/assets/icon-plus.svg" alt="" /> Add New Item</div>
+          <div @click="addNewInvoiceItem" class="flex button">
+            <img src="@/assets/icon-plus.svg" alt="" />
+            Add New Item
+          </div>
         </div>
       </div>
 
       <!-- Save/Exit -->
       <div class="save flex">
         <div class="left">
-          <button v-if="!editInvoice" @click="closeInvoice" class="red">Discard</button>
-          <button v-else @click="closeInvoice" class="red">Cancel</button>
+          <button type="button" @click="closeInvoice" class="red">Cancel</button>
         </div>
         <div class="right flex">
-          <button v-if="!editInvoice" @click="saveDraft" class="dark-purple">Save Draft</button>
-          <button v-if="!editInvoice" @click="publishInvoice" class="purple">Create Invoice</button>
-          <button v-else class="purple">Update Invoice</button>
+          <button v-if="!editInvoice" type="submit" @click="saveDraft" class="dark-purple">Save Draft</button>
+          <button v-if="!editInvoice" type="submit" @click="publishInvoice" class="purple">Create Invoice</button>
+          <button v-if="editInvoice" type="sumbit" class="purple">Update Invoice</button>
         </div>
       </div>
     </form>
@@ -123,14 +125,15 @@
 <script>
 import db from "../firebase/firebaseInit";
 import Loading from "../components/Loading";
-import { mapMutations, mapState } from "vuex";
+import { mapActions, mapMutations, mapState } from "vuex";
 import { uid } from "uid";
 export default {
+  name: "invoiceModal",
   data() {
     return {
       dateOptions: { year: "numeric", month: "short", day: "numeric" },
-      loading: null,
       docId: null,
+      loading: null,
       billerStreetAddress: null,
       billerCity: null,
       billerZipCode: null,
@@ -153,20 +156,18 @@ export default {
       invoiceTotal: 0,
     };
   },
+  components: {
+    Loading,
+  },
   created() {
-    // When the component is opened, getting the date
-    // for the invoice Date
+    // get current date for invoice date field
     if (!this.editInvoice) {
       this.invoiceDateUnix = Date.now();
       this.invoiceDate = new Date(this.invoiceDateUnix).toLocaleDateString("en-us", this.dateOptions);
     }
 
     if (this.editInvoice) {
-      console.log("hello");
-      const currentInvoiceArray = this.invoiceData.filter((invoice) => {
-        return invoice.docId === this.currentEditingInvoice;
-      });
-      const currentInvoice = currentInvoiceArray[0];
+      const currentInvoice = this.currentInvoiceArray[0];
       this.docId = currentInvoice.docId;
       this.billerStreetAddress = currentInvoice.billerStreetAddress;
       this.billerCity = currentInvoice.billerCity;
@@ -190,25 +191,24 @@ export default {
       this.invoiceTotal = currentInvoice.invoiceTotal;
     }
   },
-  components: {
-    Loading,
-  },
   methods: {
-    ...mapMutations(["TOGGLE_INVOICE", "TOGGLE_MODAL"]),
+    ...mapMutations(["TOGGLE_INVOICE", "TOGGLE_MODAL", "TOGGLE_EDIT_INVOICE"]),
 
-    // If clicked on the black portion of popup
-    // close newInvoice Component
+    ...mapActions(["UPDATE_INVOICE", "GET_INVOICES"]),
+
     checkClick(e) {
-      if (e.target === this.$refs.newInvoiceWrap) {
+      if (e.target === this.$refs.invoiceWrap) {
         this.TOGGLE_MODAL();
       }
     },
 
     closeInvoice() {
       this.TOGGLE_INVOICE();
+      if (this.editInvoice) {
+        this.TOGGLE_EDIT_INVOICE();
+      }
     },
 
-    // create new invoice item
     addNewInvoiceItem() {
       this.invoiceItemList.push({
         id: uid(),
@@ -219,23 +219,10 @@ export default {
       });
     },
 
-    // takes in id as a parameter, runs a filter
-    // method to delete the item selected to delete
     deleteInvoiceItem(id) {
       this.invoiceItemList = this.invoiceItemList.filter((item) => item.id !== id);
     },
 
-    saveDraft() {
-      this.invoiceDraft = true;
-      this.invoicePending = false;
-    },
-
-    publishInvoice() {
-      this.invoiceDraft = false;
-      this.invoicePending = true;
-    },
-
-    // cal invoice total
     calInvoiceTotal() {
       this.invoiceTotal = 0;
       this.invoiceItemList.forEach((item) => {
@@ -243,15 +230,22 @@ export default {
       });
     },
 
+    publishInvoice() {
+      this.invoicePending = true;
+    },
+
+    saveDraft() {
+      this.invoiceDraft = true;
+    },
+
     async uploadInvoice() {
       if (this.invoiceItemList.length <= 0) {
-        alert("please ensure you filled out invoice items!");
+        alert("Please ensure you filled out work items!");
         return;
       }
 
       this.loading = true;
 
-      // calculating total of invoice, prior to uploading
       this.calInvoiceTotal();
 
       const dataBase = db.collection("invoices").doc();
@@ -283,23 +277,20 @@ export default {
 
       this.loading = false;
 
-      this.$store.commit("TOGGLE_INVOICE");
+      this.TOGGLE_INVOICE();
 
-      this.$store.dispatch("GET_INVOICES");
+      this.GET_INVOICES();
     },
 
     async updateInvoice() {
       if (this.invoiceItemList.length <= 0) {
-        alert("please ensure you filled out invoice items!");
+        alert("Please ensure you filled out work items!");
         return;
       }
 
       this.loading = true;
 
-      // calculating total of invoice, prior to uploading
       this.calInvoiceTotal();
-
-      console.log(this.invoiceTotal);
 
       const dataBase = db.collection("invoices").doc(this.docId);
 
@@ -323,16 +314,15 @@ export default {
       });
 
       this.loading = false;
+
       const data = {
         docId: this.docId,
         routeId: this.$route.params.invoiceId,
       };
-      this.$store.dispatch("UPDATE_INVOICE", data);
+
+      this.UPDATE_INVOICE(data);
     },
 
-    // Main function that gets called when submitting form
-    // we are then checking if it is a new invoice, or edits
-    // then running the correct function
     submitForm() {
       if (this.editInvoice) {
         this.updateInvoice();
@@ -342,15 +332,9 @@ export default {
     },
   },
   computed: {
-    ...mapState({
-      editInvoice: "editInvoice",
-      currentEditingInvoice: "currentEditingInvoice",
-      invoiceData: "invoiceData",
-    }),
+    ...mapState(["editInvoice", "currentInvoiceArray"]),
   },
   watch: {
-    // Watching for user to select a payment term
-    // once they do, we upate the payment due date
     paymentTerms() {
       const futureDate = new Date();
       this.paymentDueDateUnix = futureDate.setDate(futureDate.getDate() + parseInt(this.paymentTerms));
@@ -361,26 +345,29 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.new-invoice-wrap {
+.invoice-wrap {
+  position: fixed;
   top: 0;
   left: 0;
-  position: fixed;
-  background-color: rgba(0, 0, 0, 0);
   width: 100%;
   height: 100vh;
   overflow: scroll;
+  &::-webkit-scrollbar {
+    display: none;
+  }
   @media (min-width: 900px) {
     left: 90px;
   }
 
-  .new-invoice {
+  .invoice-content {
     position: relative;
     padding: 56px;
     max-width: 700px;
     width: 100%;
     background-color: #141625;
-    color: #dfe3fa;
+    color: #fff;
     box-shadow: 10px 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
     h1 {
       margin-bottom: 48px;
       color: #fff;
@@ -398,9 +385,11 @@ export default {
       margin-bottom: 24px;
     }
 
-    .bill-from,
-    .bill-to {
+    // Bill To / Bill From
+    .bill-to,
+    .bill-from {
       margin-bottom: 48px;
+
       .location-details {
         gap: 16px;
         div {
@@ -408,6 +397,8 @@ export default {
         }
       }
     }
+
+    // Invoice Work
 
     .invoice-work {
       .payment {
@@ -421,11 +412,12 @@ export default {
         .item-list {
           width: 100%;
 
-          // Item Table List Styling
+          // Item Table Styling
           .table-heading,
           .table-items {
             gap: 16px;
             font-size: 12px;
+
             .item-name {
               flex-basis: 50%;
             }
@@ -457,9 +449,9 @@ export default {
             margin-bottom: 24px;
 
             img {
+              position: absolute;
               top: 15px;
               right: 0;
-              position: absolute;
               width: 12px;
               height: 16px;
             }
@@ -504,12 +496,11 @@ export default {
 
   input,
   select {
-    min-width: 0;
     width: 100%;
     background-color: #1e2139;
     color: #fff;
     border-radius: 4px;
-    padding: 12px 6px;
+    padding: 12px 4px;
     border: none;
 
     &:focus {

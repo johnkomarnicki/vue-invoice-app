@@ -1,8 +1,8 @@
 <template>
-  <router-link :to="{ name: 'Invoice', params: { invoiceId: invoice.invoiceId } }" class="invoice flex">
+  <router-link class="invoice flex" :to="{ name: 'Invoice', params: { invoiceId: invoice.invoiceId } }">
     <div class="left flex">
       <span class="tracking-number">#{{ invoice.invoiceId }}</span>
-      <span class="due-date">Due {{ invoice.paymentDueDate }}</span>
+      <span class="due-date">{{ invoice.paymentDueDate }}</span>
       <span class="person">{{ invoice.clientName }}</span>
     </div>
     <div class="right flex">
@@ -26,10 +26,6 @@
 export default {
   name: "invoice",
   props: ["invoice"],
-  created() {},
-  data() {
-    return {};
-  },
 };
 </script>
 
@@ -45,10 +41,15 @@ export default {
   background-color: #1e2139;
   align-items: center;
 
+  span {
+    font-size: 13px;
+  }
+
   .left {
     align-items: center;
     flex-basis: 60%;
     gap: 16px;
+
     span {
       flex: 1;
     }
@@ -66,12 +67,8 @@ export default {
     .price {
       flex: 1;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 600px;
     }
-  }
-
-  span {
-    font-size: 13px;
   }
 }
 </style>

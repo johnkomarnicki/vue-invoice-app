@@ -3,18 +3,19 @@ import db from "../firebase/firebaseInit";
 
 export default createStore({
   state: {
-    invoicesLoaded: null,
     invoiceData: [],
-    filteredInvoice: null,
-    currentInvoiceArray: null,
-    newInvoice: null,
-    editInvoice: null,
-    currentEditingInvoice: null,
+    invoiceModal: null,
     modalActive: null,
+    invoicesLoaded: null,
+    currentInvoiceArray: null,
+    editInvoice: null,
   },
   mutations: {
     TOGGLE_INVOICE(state) {
-      state.newInvoice = !state.newInvoice;
+      state.invoiceModal = !state.invoiceModal;
+    },
+    TOGGLE_MODAL(state) {
+      state.modalActive = !state.modalActive;
     },
     SET_INVOICE_DATA(state, payload) {
       state.invoiceData.push(payload);
@@ -22,11 +23,19 @@ export default createStore({
     INVOICES_LOADED(state) {
       state.invoicesLoaded = true;
     },
+    SET_CURRENT_INVOICE(state, payload) {
+      state.currentInvoiceArray = state.invoiceData.filter((invoice) => {
+        return invoice.invoiceId === payload;
+      });
+    },
+    TOGGLE_EDIT_INVOICE(state) {
+      state.editInvoice = !state.editInvoice;
+    },
     DELETE_INVOICE(state, payload) {
       state.invoiceData = state.invoiceData.filter((invoice) => invoice.docId !== payload);
     },
     UPDATE_STATUS_TO_PAID(state, payload) {
-      state.invoiceData.filter((invoice) => {
+      state.invoiceData.forEach((invoice) => {
         if (invoice.docId === payload) {
           invoice.invoicePaid = true;
           invoice.invoicePending = false;
@@ -34,33 +43,13 @@ export default createStore({
       });
     },
     UPDATE_STATUS_TO_PENDING(state, payload) {
-      state.invoiceData.filter((invoice) => {
+      state.invoiceData.forEach((invoice) => {
         if (invoice.docId === payload) {
           invoice.invoicePaid = false;
           invoice.invoicePending = true;
           invoice.invoiceDraft = false;
         }
       });
-    },
-    EDITING_INVOICE(state, payload) {
-      console.log("this is running");
-      state.editInvoice = !state.editInvoice;
-      state.currentEditingInvoice = payload;
-    },
-    TOGGLE_EDITING_INVOICE(state) {
-      console.log("this is running 2");
-      state.editInvoice = !state.editInvoice;
-    },
-    SET_CURRENT_INVOICE(state, routeId) {
-      state.currentInvoiceArray = state.invoiceData.filter((invoice) => {
-        return invoice.invoiceId === routeId;
-      });
-    },
-    FILTER_INVOICES(state, payload) {
-      state.filteredInvoice = payload;
-    },
-    TOGGLE_MODAL(state) {
-      state.modalActive = !state.modalActive;
     },
   },
   actions: {
@@ -99,6 +88,13 @@ export default createStore({
       });
       commit("INVOICES_LOADED");
     },
+    async UPDATE_INVOICE({ commit, dispatch }, { docId, routeId }) {
+      commit("DELETE_INVOICE", docId);
+      await dispatch("GET_INVOICES");
+      commit("TOGGLE_INVOICE");
+      commit("TOGGLE_EDIT_INVOICE");
+      commit("SET_CURRENT_INVOICE", routeId);
+    },
     async DELETE_INVOICE({ commit }, docId) {
       const getInvoice = db.collection("invoices").doc(docId);
       await getInvoice.delete();
@@ -120,13 +116,6 @@ export default createStore({
         invoiceDraft: false,
       });
       commit("UPDATE_STATUS_TO_PENDING", docId);
-    },
-    async UPDATE_INVOICE({ commit, dispatch }, { docId, routeId }) {
-      commit("DELETE_INVOICE", docId);
-      await dispatch("GET_INVOICES");
-      commit("TOGGLE_INVOICE");
-      commit("TOGGLE_EDITING_INVOICE");
-      commit("SET_CURRENT_INVOICE", routeId);
     },
   },
   modules: {},

@@ -1,16 +1,16 @@
 <template>
   <div v-if="invoicesLoaded">
-    <div class="app flex" v-if="!mobile">
+    <div v-if="!mobile" class="app flex flex-column">
       <Navigation />
       <div class="app-content flex flex-column">
         <Modal v-if="modalActive" />
         <transition name="invoice">
-          <NewInvoice v-if="newInvoice" />
+          <InvoiceModal v-if="invoiceModal" />
         </transition>
         <router-view />
       </div>
     </div>
-    <div class="mobile-message flex" v-else>
+    <div v-else class="mobile-message flex flex-column">
       <h2>Sorry, this app is not supported on Mobile Devices</h2>
       <p>To use this app, please use a computer or Tablet</p>
     </div>
@@ -18,46 +18,40 @@
 </template>
 
 <script>
-import { mapActions, mapState } from "vuex";
+import { mapState, mapActions } from "vuex";
 import Navigation from "./components/Navigation";
-import NewInvoice from "./components/NewInvoice";
+import InvoiceModal from "./components/InvoiceModal";
 import Modal from "./components/Modal";
 export default {
-  name: "App",
-  components: {
-    Navigation,
-    NewInvoice,
-    Modal,
-  },
   data() {
     return {
-      windownWidth: null,
       mobile: null,
     };
   },
+  components: {
+    Navigation,
+    InvoiceModal,
+    Modal,
+  },
   created() {
-    this.getInvoiceData();
+    this.GET_INVOICES();
+    this.checkScreen();
     window.addEventListener("resize", this.checkScreen);
   },
   methods: {
     ...mapActions(["GET_INVOICES"]),
 
-    getInvoiceData() {
-      this.GET_INVOICES();
-    },
-
     checkScreen() {
-      this.windownWidth = window.innerWidth;
-      if (this.windownWidth <= 750) {
+      const windowWidth = window.innerWidth;
+      if (windowWidth <= 750) {
         this.mobile = true;
         return;
       }
       this.mobile = false;
-      return;
     },
   },
   computed: {
-    ...mapState(["newInvoice", "invoicesLoaded", "modalActive"]),
+    ...mapState(["invoiceModal", "modalActive", "invoicesLoaded"]),
   },
 };
 </script>
@@ -72,23 +66,11 @@ export default {
   font-family: "Poppins", sans-serif;
 }
 
-// animated invoice
-.invoice-enter-active,
-.invoice-leave-active {
-  transition: 0.8s ease all;
-}
-
-.invoice-enter-from,
-.invoice-leave-to {
-  transform: translateX(-700px);
-}
-
 .app {
   background-color: #141625;
   min-height: 100vh;
-  flex-direction: column;
   @media (min-width: 900px) {
-    flex-direction: row;
+    flex-direction: row !important;
   }
 
   .app-content {
@@ -99,12 +81,10 @@ export default {
 }
 
 .mobile-message {
-  flex-direction: column;
   text-align: center;
-  padding: 20px;
-  height: 100vh;
   justify-content: center;
   align-items: center;
+  height: 100vh;
   background-color: #141625;
   color: #fff;
 
@@ -113,7 +93,17 @@ export default {
   }
 }
 
-// button styling
+// animated invoice
+
+.invoice-enter-active,
+.invoice-leave-active {
+  transition: 0.8s ease all;
+}
+
+.invoice-enter-from,
+.invoice-leave-to {
+  transform: translateX(-700px);
+}
 
 button,
 .button {
@@ -162,7 +152,7 @@ button,
   max-width: 850px;
   margin: 0 auto;
 
-  @media (min-width: 800px) {
+  @media (min-width: 900px) {
     padding-top: 72px;
   }
 }
